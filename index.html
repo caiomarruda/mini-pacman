@@ -323,6 +323,7 @@
     const TURN_SNAP = 8;
     const MOUTH_CYCLE_DISTANCE = 20;
     const LEVEL_SPEED_BONUS = 0.1;
+    const BASE_FRAME_MS = 1000 / 60;
 
     const canvas = document.getElementById("game");
     const ctx = canvas.getContext("2d");
@@ -344,6 +345,7 @@
     let powerTimer = 0;
     let running = false;
     let animationId = null;
+    let lastFrameTime = 0;
     let audioCtx = null;
     let lastChompAt = 0;
     let isMuted = false;
@@ -798,9 +800,9 @@
       player[axis] = snapTowards(player[axis], center, Math.min(1.1, Math.abs(center - player[axis])));
     }
 
-    function tryTurn() {
+    function tryTurn(deltaFactor) {
       if (player.nextX === 0 && player.nextY === 0) return;
-      const playerSpeed = getPlayerSpeed();
+      const playerSpeed = getPlayerSpeed() * deltaFactor;
 
       const turningHorizontal = player.nextX !== 0;
       const axisToAlign = turningHorizontal ? "y" : "x";
@@ -821,12 +823,12 @@
       }
     }
 
-    function updatePlayer() {
+    function updatePlayer(deltaFactor) {
       const previousX = player.x;
       const previousY = player.y;
-      const playerSpeed = getPlayerSpeed();
+      const playerSpeed = getPlayerSpeed() * deltaFactor;
 
-      tryTurn();
+      tryTurn(deltaFactor);
 
       if (player.dirX !== 0) alignToLane("y");
       if (player.dirY !== 0) alignToLane("x");
@@ -872,7 +874,7 @@
       });
 
       if (powerTimer > 0) {
-        powerTimer -= 1;
+        powerTimer = Math.max(0, powerTimer - deltaFactor);
       } else {
         ghosts.forEach((ghost) => {
           ghost.frightened = false;
@@ -888,8 +890,7 @@
       }
     }
 
-    function chooseGhostDirection(ghost) {
-      const ghostSpeed = getGhostSpeed();
+    function chooseGhostDirection(ghost, ghostSpeed) {
       const options = [
         { x: 1, y: 0 },
         { x: -1, y: 0 },
@@ -920,12 +921,12 @@
       ghost.dirY = selected.y;
     }
 
-    function updateGhosts() {
-      const ghostSpeed = getGhostSpeed();
+    function updateGhosts(deltaFactor) {
+      const ghostSpeed = getGhostSpeed() * deltaFactor;
       ghosts.forEach((ghost) => {
         const centerAligned = Math.abs((ghost.x - TILE / 2) % TILE) < 2 && Math.abs((ghost.y - TILE / 2) % TILE) < 2;
         if (centerAligned || !canMove(ghost, ghost.dirX, ghost.dirY, ghostSpeed)) {
-          chooseGhostDirection(ghost);
+          chooseGhostDirection(ghost, ghostSpeed);
         }
 
         if (canMove(ghost, ghost.dirX, ghost.dirY, ghostSpeed)) {
@@ -1047,10 +1048,14 @@
       ghosts.forEach(drawGhost);
     }
 
-    function tick() {
+    function tick(timestamp = 0) {
       if (!running) return;
-      updatePlayer();
-      updateGhosts();
+      if (!lastFrameTime) lastFrameTime = timestamp;
+      const deltaFactor = Math.min((timestamp - lastFrameTime) / BASE_FRAME_MS || 1, 1.5);
+      lastFrameTime = timestamp;
+
+      updatePlayer(deltaFactor);
+      updateGhosts(deltaFactor);
       draw();
       syncHud();
       animationId = requestAnimationFrame(tick);
@@ -1070,17 +1075,19 @@
     function startGame() {
       ensureAudio();
       if (animationId) cancelAnimationFrame(animationId);
+      lastFrameTime = 0;
       resetGame(true);
       running = true;
       hideOverlay();
       playStartJingle();
       draw();
-      tick();
+      animationId = requestAnimationFrame(tick);
     }
 
     function endGame(victory) {
       running = false;
       if (animationId) cancelAnimationFrame(animationId);
+      lastFrameTime = 0;
       if (victory) playWinJingle();
       showOverlay(
         victory ? "Você venceu" : "Fim de jogo",
