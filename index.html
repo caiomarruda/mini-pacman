@@ -227,6 +227,10 @@
       flex: 0 1 auto;
     }
 
+    .lang-current {
+      display: none;
+    }
+
     .lang-select {
       width: 100%;
       border: 1px solid rgba(255, 255, 255, 0.1);
@@ -346,6 +350,17 @@
       .lang-select {
         padding: 9px 28px 9px 10px;
         font-size: 0.85rem;
+        color: transparent;
+        text-shadow: none;
+      }
+
+      .lang-current {
+        position: absolute;
+        inset: 0 28px 0 0;
+        display: grid;
+        place-items: center;
+        font-size: 1rem;
+        pointer-events: none;
       }
 
       .board {
@@ -378,6 +393,7 @@
         <h1>Pac-Man</h1>
         <div class="header-actions">
           <label class="lang-picker" for="language-select" aria-label="Selecionar idioma">
+            <span class="lang-current" id="language-current" aria-hidden="true">🇺🇸</span>
             <select class="lang-select" id="language-select">
               <option value="en">🇺🇸 English</option>
               <option value="pt-BR">🇧🇷 Português (Brasil)</option>
@@ -445,6 +461,7 @@
     const actionBtn = document.getElementById("action");
     const muteBtn = document.getElementById("mute-btn");
     const languageSelect = document.getElementById("language-select");
+    const languageCurrentEl = document.getElementById("language-current");
     const scoreLabelEl = document.getElementById("score-label");
     const livesLabelEl = document.getElementById("lives-label");
     const levelLabelEl = document.getElementById("level-label");
@@ -589,20 +606,15 @@
       updateOverlayText();
       languageSelect.setAttribute("aria-label", copy.languageLabel);
       languageSelect.title = copy.languageLabel;
+      languageCurrentEl.textContent = currentLanguage === "pt-BR" ? "🇧🇷" : currentLanguage === "de" ? "🇩🇪" : "🇺🇸";
     }
 
     function syncLanguageOptions() {
-      const labels = IS_MOBILE_DEVICE
-        ? {
-            "en": "🇺🇸 EN",
-            "pt-BR": "🇧🇷 PT",
-            "de": "🇩🇪 DE"
-          }
-        : {
-            "en": "🇺🇸 English",
-            "pt-BR": "🇧🇷 Português (Brasil)",
-            "de": "🇩🇪 Deutsch"
-          };
+      const labels = {
+        "en": "🇺🇸 English",
+        "pt-BR": "🇧🇷 Português (Brasil)",
+        "de": "🇩🇪 Deutsch"
+      };
 
       Array.from(languageSelect.options).forEach((option) => {
         option.textContent = labels[option.value] || option.value;
