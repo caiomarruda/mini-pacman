@@ -214,62 +214,6 @@
       flex: 0 0 auto;
     }
 
-    .touch-controls {
-      display: none;
-      margin-top: 12px;
-      align-self: center;
-      grid-template-columns: repeat(3, 64px);
-      grid-template-areas:
-        ". up ."
-        "left down right";
-      gap: 10px;
-      touch-action: none;
-      user-select: none;
-      background: transparent;
-    }
-
-    .touch-btn {
-      width: 64px;
-      height: 64px;
-      padding: 0;
-      display: grid;
-      place-items: center;
-      color: var(--text);
-      background: rgba(255, 255, 255, 0.08);
-      border: 1px solid rgba(255, 255, 255, 0.12);
-      box-shadow: inset 0 0 14px rgba(255, 255, 255, 0.03);
-      backdrop-filter: blur(12px);
-      -webkit-tap-highlight-color: transparent;
-    }
-
-    .touch-btn:active {
-      transform: scale(0.96);
-      background: rgba(255, 212, 71, 0.18);
-      border-color: rgba(255, 212, 71, 0.32);
-    }
-
-    .touch-btn svg {
-      width: 24px;
-      height: 24px;
-      display: block;
-    }
-
-    .touch-up {
-      grid-area: up;
-    }
-
-    .touch-left {
-      grid-area: left;
-    }
-
-    .touch-right {
-      grid-area: right;
-    }
-
-    .touch-down {
-      grid-area: down;
-    }
-
     @media (max-width: 680px) {
       body {
         padding: 6px;
@@ -328,25 +272,6 @@
       .help {
         margin-top: 8px;
         font-size: 0.82rem;
-        display: none;
-      }
-
-      .touch-controls {
-        display: grid;
-        grid-template-columns: repeat(3, min(18vw, 60px));
-        gap: 8px;
-        position: fixed;
-        left: 50%;
-        bottom: calc(env(safe-area-inset-bottom, 0px) + 10px);
-        transform: translateX(-50%);
-        z-index: 30;
-        margin-top: 0;
-        align-self: auto;
-      }
-
-      .touch-btn {
-        width: min(18vw, 60px);
-        height: min(18vw, 60px);
       }
     }
   </style>
@@ -385,37 +310,6 @@
       </div>
     </section>
 
-    <div class="touch-controls" aria-label="Controles touch">
-      <button class="touch-btn touch-up" type="button" data-direction="up" aria-label="Mover para cima">
-        <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M12 5 5.5 11.5"/>
-          <path d="M12 5 18.5 11.5"/>
-          <path d="M12 5v14"/>
-        </svg>
-      </button>
-      <button class="touch-btn touch-left" type="button" data-direction="left" aria-label="Mover para a esquerda">
-        <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M5 12h14"/>
-          <path d="M5 12 11.5 5.5"/>
-          <path d="M5 12 11.5 18.5"/>
-        </svg>
-      </button>
-      <button class="touch-btn touch-right" type="button" data-direction="right" aria-label="Mover para a direita">
-        <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M19 12H5"/>
-          <path d="M19 12 12.5 5.5"/>
-          <path d="M19 12 12.5 18.5"/>
-        </svg>
-      </button>
-      <button class="touch-btn touch-down" type="button" data-direction="down" aria-label="Mover para baixo">
-        <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M12 19 5.5 12.5"/>
-          <path d="M12 19 18.5 12.5"/>
-          <path d="M12 19V5"/>
-        </svg>
-      </button>
-    </div>
-
     <p class="help">Controles: setas ou WASD. Pressione espaço para reiniciar após perder ou vencer.</p>
   </main>
 
@@ -429,7 +323,6 @@
     const TURN_SNAP = 8;
     const MOUTH_CYCLE_DISTANCE = 20;
     const LEVEL_SPEED_BONUS = 0.1;
-    const BASE_FRAME_MS = 1000 / 60;
 
     const canvas = document.getElementById("game");
     const ctx = canvas.getContext("2d");
@@ -441,7 +334,6 @@
     const overlayText = document.getElementById("overlay-text");
     const actionBtn = document.getElementById("action");
     const muteBtn = document.getElementById("mute-btn");
-    const touchButtons = document.querySelectorAll(".touch-btn");
 
     let walls = [];
     let pellets = [];
@@ -452,7 +344,6 @@
     let powerTimer = 0;
     let running = false;
     let animationId = null;
-    let lastFrameTime = 0;
     let audioCtx = null;
     let lastChompAt = 0;
     let isMuted = false;
@@ -907,9 +798,9 @@
       player[axis] = snapTowards(player[axis], center, Math.min(1.1, Math.abs(center - player[axis])));
     }
 
-    function tryTurn(deltaFactor) {
+    function tryTurn() {
       if (player.nextX === 0 && player.nextY === 0) return;
-      const playerSpeed = getPlayerSpeed() * deltaFactor;
+      const playerSpeed = getPlayerSpeed();
 
       const turningHorizontal = player.nextX !== 0;
       const axisToAlign = turningHorizontal ? "y" : "x";
@@ -930,12 +821,12 @@
       }
     }
 
-    function updatePlayer(deltaFactor) {
+    function updatePlayer() {
       const previousX = player.x;
       const previousY = player.y;
-      const playerSpeed = getPlayerSpeed() * deltaFactor;
+      const playerSpeed = getPlayerSpeed();
 
-      tryTurn(deltaFactor);
+      tryTurn();
 
       if (player.dirX !== 0) alignToLane("y");
       if (player.dirY !== 0) alignToLane("x");
@@ -981,7 +872,7 @@
       });
 
       if (powerTimer > 0) {
-        powerTimer = Math.max(0, powerTimer - deltaFactor);
+        powerTimer -= 1;
       } else {
         ghosts.forEach((ghost) => {
           ghost.frightened = false;
@@ -997,7 +888,8 @@
       }
     }
 
-    function chooseGhostDirection(ghost, ghostSpeed) {
+    function chooseGhostDirection(ghost) {
+      const ghostSpeed = getGhostSpeed();
       const options = [
         { x: 1, y: 0 },
         { x: -1, y: 0 },
@@ -1028,12 +920,12 @@
       ghost.dirY = selected.y;
     }
 
-    function updateGhosts(deltaFactor) {
-      const ghostSpeed = getGhostSpeed() * deltaFactor;
+    function updateGhosts() {
+      const ghostSpeed = getGhostSpeed();
       ghosts.forEach((ghost) => {
         const centerAligned = Math.abs((ghost.x - TILE / 2) % TILE) < 2 && Math.abs((ghost.y - TILE / 2) % TILE) < 2;
         if (centerAligned || !canMove(ghost, ghost.dirX, ghost.dirY, ghostSpeed)) {
-          chooseGhostDirection(ghost, ghostSpeed);
+          chooseGhostDirection(ghost);
         }
 
         if (canMove(ghost, ghost.dirX, ghost.dirY, ghostSpeed)) {
@@ -1155,14 +1047,10 @@
       ghosts.forEach(drawGhost);
     }
 
-    function tick(timestamp = 0) {
+    function tick() {
       if (!running) return;
-      if (!lastFrameTime) lastFrameTime = timestamp;
-      const deltaFactor = Math.min((timestamp - lastFrameTime) / BASE_FRAME_MS || 1, 1.5);
-      lastFrameTime = timestamp;
-
-      updatePlayer(deltaFactor);
-      updateGhosts(deltaFactor);
+      updatePlayer();
+      updateGhosts();
       draw();
       syncHud();
       animationId = requestAnimationFrame(tick);
@@ -1182,7 +1070,6 @@
     function startGame() {
       ensureAudio();
       if (animationId) cancelAnimationFrame(animationId);
-      lastFrameTime = 0;
       resetGame(true);
       running = true;
       hideOverlay();
@@ -1194,7 +1081,6 @@
     function endGame(victory) {
       running = false;
       if (animationId) cancelAnimationFrame(animationId);
-      lastFrameTime = 0;
       if (victory) playWinJingle();
       showOverlay(
         victory ? "Você venceu" : "Fim de jogo",
@@ -1241,14 +1127,6 @@
 
     muteBtn.addEventListener("click", () => {
       toggleMute();
-    });
-
-    touchButtons.forEach((button) => {
-      button.addEventListener("pointerdown", (event) => {
-        event.preventDefault();
-        ensureAudio();
-        setNextDirection(button.dataset.direction);
-      });
     });
 
     canvas.addEventListener("touchstart", (event) => {
